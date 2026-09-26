@@ -6,7 +6,7 @@ AirMesh is a lightweight, cross-device background utility designed to automatica
 
 ## Basic Overview
 
-RelayNet operates silently in the system tray / top-bar extension area. Once installed, devices on the same local network running RelayNet will automatically discover each other and broadcast clipboard copies (text and files) without relying on external cloud servers.
+AirMesh operates silently in the system tray / top-bar extension area. Once installed, devices on the same local network running RelayNet will automatically discover each other and broadcast clipboard copies (text and files) without relying on external cloud servers.
 
 ### Core Features
 * Automatic local network device discovery via UDP broadcasting.
