@@ -1,347 +1,367 @@
 # AirMesh
 
-AirMesh is a lightweight, cross-device background utility for Linux designed to automatically synchronize system clipboards and enable peer-to-peer file transfers across a shared local Wi-Fi network.
+AirMesh is a lightweight Linux utility for clipboard synchronization and peer-to-peer file transfers over a local Wi-Fi network.
 
----
+## Features
 
-## Basic Info
+- **Java 11** using AWT, Swing, and Sockets
+- UDP device discovery on **port 8888**
+- TCP clipboard/file transfer on **port 8889**
+- Clipboard synchronization with anti-echo protection
+- Incoming files saved to `~/Downloads`
+- GNOME tray/AppIndicator support
+- Systemd user-service integration
+- Works on X11 and Wayland
+- No cloud service required
 
-AirMesh runs silently in your Linux system tray or top-bar extension area. Once active, devices connected to the same local Wi-Fi network running AirMesh automatically discover one another and synchronize clipboard text and file selections without relying on cloud services or external servers.
+## Architecture
 
-### Core Features
+- `Main.java` — Application entry point and `--minimized` argument.
+- `DiscoveryService.java` — UDP discovery using port `8888`.
+- `NetworkServer` / `NetworkClient` — TCP communication using port `8889`.
+- `ClipboardService.java` — System clipboard monitoring and synchronization.
+- `wifi-sync-app.service` — Systemd background service.
 
-* Automatic local device discovery using UDP broadcasting.
-* Real-time bidirectional clipboard text and file synchronization.
-* Direct TCP peer-to-peer file transfers with prompt confirmation dialogs.
-* Systemd user service integration for automated background execution on boot/login.
-* Top-bar system tray integration via GNOME AppIndicators or standard desktop trays.
+## Requirements
 
----
+- Linux
+- Java 11+
+- Apache Maven
+- Systemd
+- UFW (optional)
 
-## Architecture & Developer Guide
-
-AirMesh is implemented in Java 11 using native AWT, Swing, and Socket networking to remain lightweight and dependency-free.
-
-### Codebase Structure
-
-1. **`Main.java` (Application Entry Point)**
-   * Configures system Swing Look and Feel.
-   * Parses command-line arguments such as `--minimized` passed by systemd or autostart shortcuts.
-
-2. **`com.wifisync.network.DiscoveryService` (UDP Peer Discovery)**
-   * Listens on UDP port `8888`.
-   * Periodically sends broadcast packets (`WIFI_SYNC_DISCOVER_REQ`) across all active network interfaces.
-   * Responds with local hostname information (`WIFI_SYNC_DISCOVER_RESP:<hostname>`) upon receiving discovery requests.
-
-3. **`com.wifisync.network.NetworkServer` & `NetworkClient` (TCP Data Handler)**
-   * Server listens on TCP port `8889` for inbound data payloads.
-   * Handles multi-threaded transfers for `CLIPBOARD` text streams and `FILE` byte streams.
-   * Prompts user approval via interactive Swing dialogs before writing incoming files to `~/Downloads`.
-
-4. **`com.wifisync.service.ClipboardService` (Clipboard Listener)**
-   * Registers a `java.awt.datatransfer.FlavorListener` to detect system copy events (`Ctrl+C`).
-   * Differentiates between text payloads (`DataFlavor.stringFlavor`) and file lists (`DataFlavor.javaFileListFlavor`).
-   * Uses an internal `isSelfUpdating` flag to prevent infinite clipboard echo loops during remote updates.
-
-5. **`airmesh.service` (Systemd User Service)**
-   * Installed at `~/.config/systemd/user/airmesh.service`.
-   * Imports active GUI environment variables (`DISPLAY`, `WAYLAND_DISPLAY`, `XAUTHORITY`, `DBUS_SESSION_BUS_ADDRESS`, `XDG_RUNTIME_DIR`) into systemd scope to ensure AWT tray UI elements render correctly under X11/Wayland.
-
----
-
-## Prerequisites
-
-* Operating System: Linux (Ubuntu, Debian, Fedora, Arch Linux, etc.)
-* Java Runtime Environment (JRE) / JDK 11 or higher
-* Apache Maven
-* Systemd
-* UFW (optional, recommended if firewall protection is enabled)
-
----
-
-# Installation & Setup
-
-### 1. Make the Installation Script Executable
+## Installation
 
 ```bash
 chmod +x install.sh
-```
-
-### 2. Run the Installer
-
-```bash
 ./install.sh
 ```
 
-The script compiles the application via Maven, copies binary files to `~/.local/share/airmesh/`, places a wrapper script in `~/.local/bin/airmesh`, registers the desktop shortcut, and enables the background systemd service.
+The installer creates:
 
----
-
-# Comprehensive Service Management Commands
-
-AirMesh runs as a user-level systemd service (`airmesh.service` or `wifi-sync-app.service`).
-
-Use the following commands in your terminal to manage and verify the service status.
-
-## 1. Check Service Status
-
-To check if the service is currently running, active, or failing:
-
-```bash
-systemctl --user status airmesh.service
+```text
+JAR:       ~/.local/share/wifi-sync-app/
+Launcher:  ~/.local/bin/wifi-sync-app
+Service:   ~/.config/systemd/user/wifi-sync-app.service
 ```
 
-If your service is named `wifi-sync-app.service`, use:
+## Systemd Service
+
+AirMesh runs as a **user-level systemd service**.
+
+### Reload Service Configuration
+
+Run this after modifying the service file:
+
+```bash
+systemctl --user daemon-reload
+```
+
+### Enable and Start AirMesh
+
+Enable the service to start automatically when you log in and start it immediately:
+
+```bash
+systemctl --user enable --now wifi-sync-app.service
+```
+
+### Check Service Status
 
 ```bash
 systemctl --user status wifi-sync-app.service
 ```
 
----
-
-## 2. View Live Application Logs
-
-To stream live console logs, connection events, and runtime errors:
-
-```bash
-journalctl --user -u airmesh.service -f
-```
-
-To view the last 100 log lines:
-
-```bash
-journalctl --user -u airmesh.service -n 100
-```
-
-To view logs without following them:
-
-```bash
-journalctl --user -u airmesh.service
-```
-
----
-
-## 3. Start, Stop, and Restart Service
-
 ### Start Service
 
 ```bash
-systemctl --user start airmesh.service
+systemctl --user start wifi-sync-app.service
 ```
 
 ### Stop Service
 
 ```bash
-systemctl --user stop airmesh.service
+systemctl --user stop wifi-sync-app.service
 ```
 
 ### Restart Service
 
 ```bash
-systemctl --user restart airmesh.service
+systemctl --user restart wifi-sync-app.service
 ```
 
----
-
-## 4. Enable or Disable Automatic Startup
-
-### Enable on system login
+### Enable Automatic Startup
 
 ```bash
-systemctl --user enable airmesh.service
+systemctl --user enable wifi-sync-app.service
 ```
 
-### Disable on system login
+### Disable Automatic Startup
 
 ```bash
-systemctl --user disable airmesh.service
+systemctl --user disable wifi-sync-app.service
 ```
 
-### Enable and start immediately
+### Check Whether Service Is Enabled
 
 ```bash
-systemctl --user enable --now airmesh.service
+systemctl --user is-enabled wifi-sync-app.service
 ```
 
----
-
-## 5. Verify Running Process
-
-To verify that the Java application process is running:
+### Check Whether Service Is Running
 
 ```bash
-pgrep -a java | grep airmesh
+systemctl --user is-active wifi-sync-app.service
 ```
 
-You can also search for all Java processes:
+## Logs
+
+### View Last 100 Logs
 
 ```bash
-pgrep -a java
+journalctl --user -u wifi-sync-app.service -n 100
 ```
 
----
+### View Logs Without Pager
 
-# Troubleshooting & Common Fixes
+```bash
+journalctl --user -u wifi-sync-app.service -n 100 --no-pager
+```
 
-## Top-Bar Extension Icon Missing
+### View Live Logs
 
-If the top-bar icon does not appear, ensure GNOME AppIndicators support is enabled and display variables are imported into systemd.
+```bash
+journalctl --user -u wifi-sync-app.service -f
+```
 
-### 1. Enable GNOME AppIndicators
+### View All Service Logs
+
+```bash
+journalctl --user -u wifi-sync-app.service
+```
+
+## Service File
+
+Show the installed systemd service:
+
+```bash
+systemctl --user cat wifi-sync-app.service
+```
+
+Check the actual service file:
+
+```bash
+cat ~/.config/systemd/user/wifi-sync-app.service
+```
+
+Verify the service configuration:
+
+```bash
+systemd-analyze --user verify ~/.config/systemd/user/wifi-sync-app.service
+```
+
+After changing the service file:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user restart wifi-sync-app.service
+```
+
+## Firewall Setup (UFW)
+
+AirMesh requires:
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| `8888` | UDP | Device discovery |
+| `8889` | TCP | Clipboard and file transfer |
+
+Allow UDP discovery:
+
+```bash
+sudo ufw allow 8888/udp
+```
+
+Allow TCP transfers:
+
+```bash
+sudo ufw allow 8889/tcp
+```
+
+Reload UFW:
+
+```bash
+sudo ufw reload
+```
+
+Check firewall status:
+
+```bash
+sudo ufw status
+```
+
+## Verify Listening Ports
+
+Check UDP discovery:
+
+```bash
+sudo ss -lunp | grep 8888
+```
+
+Check TCP transfer:
+
+```bash
+sudo ss -ltnp | grep 8889
+```
+
+Expected UDP output:
+
+```text
+UNCONN 0 0 0.0.0.0:8888 0.0.0.0:*
+```
+
+Expected TCP output:
+
+```text
+LISTEN 0 50 0.0.0.0:8889 0.0.0.0:*
+```
+
+## GNOME Tray Fix
+
+If the AirMesh tray icon does not appear on GNOME:
+
+### Enable AppIndicator Support
 
 ```bash
 gnome-extensions enable ubuntu-appindicators@ubuntu.com 2>/dev/null || \
 gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com 2>/dev/null
 ```
 
-### 2. Re-import Graphical Display Session Variables
+### Import GUI Environment Variables
 
 ```bash
-systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR
+systemctl --user import-environment \
+DISPLAY \
+WAYLAND_DISPLAY \
+XAUTHORITY \
+DBUS_SESSION_BUS_ADDRESS \
+XDG_RUNTIME_DIR
 ```
 
-Then restart AirMesh:
+### Restart AirMesh
 
 ```bash
-systemctl --user restart airmesh.service
+systemctl --user restart wifi-sync-app.service
 ```
 
----
+## Manual Execution
 
-# Firewall Port Access
-
-AirMesh requires the following network ports:
-
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| `8888` | UDP | Device discovery and broadcast |
-| `8889` | TCP | Clipboard and file transfers |
-
-If Ubuntu's UFW firewall is enabled, allow these ports.
-
-## Allow UDP Discovery
+Run AirMesh manually:
 
 ```bash
-sudo ufw allow 8888/udp
+wifi-sync-app
 ```
 
-## Allow TCP File and Clipboard Transfers
+Start minimized:
 
 ```bash
-sudo ufw allow 8889/tcp
+wifi-sync-app --minimized
 ```
 
-## Check UFW Status
+Or run the launcher directly:
 
 ```bash
-sudo ufw status
+~/.local/bin/wifi-sync-app --minimized
 ```
 
-Expected output:
+## Troubleshooting
 
-```text
-Status: active
-
-To                         Action      From
---                         ------      ----
-8888/udp                   ALLOW       Anywhere
-8889/tcp                   ALLOW       Anywhere
-```
-
-For IPv6-enabled UFW configurations, you may also see:
-
-```text
-8888/udp (v6)              ALLOW       Anywhere (v6)
-8889/tcp (v6)              ALLOW       Anywhere (v6)
-```
-
----
-
-## Enable UFW
-
-If UFW is installed but currently disabled:
+### Check Whether the Service Exists
 
 ```bash
-sudo ufw enable
+systemctl --user list-unit-files | grep wifi-sync-app
 ```
 
-> **Warning:** Enabling UFW can block existing network connections depending on your current rules. If you are connected to a remote machine through SSH, allow SSH first.
+### Check Service Status
 
 ```bash
-sudo ufw allow ssh
+systemctl --user status wifi-sync-app.service
 ```
 
-Then:
+### Check Recent Errors
 
 ```bash
-sudo ufw enable
+journalctl --user -u wifi-sync-app.service -n 100 --no-pager
 ```
 
----
-
-## Remove AirMesh Firewall Rules
-
-If you want to remove the AirMesh firewall rules later:
+### Check Running Java Process
 
 ```bash
-sudo ufw delete allow 8888/udp
+pgrep -a java
+```
+
+Or specifically:
+
+```bash
+pgrep -af wifi-sync-app
+```
+
+### Check AirMesh Files
+
+```bash
+ls -l ~/.local/share/wifi-sync-app/
 ```
 
 ```bash
-sudo ufw delete allow 8889/tcp
+ls -l ~/.local/bin/wifi-sync-app
 ```
-
----
-
-## Reset UFW Completely
-
-If you need to reset UFW to its default configuration:
 
 ```bash
-sudo ufw reset
+ls -l ~/.config/systemd/user/wifi-sync-app.service
 ```
 
-> **Warning:** `ufw reset` removes existing UFW rules, including rules unrelated to AirMesh. Use this only if you intentionally want to reset the firewall.
+## Complete Service Restart
 
----
+If AirMesh is not responding, run:
 
-# Verify AirMesh Network Ports
+```bash
+systemctl --user daemon-reload
+systemctl --user restart wifi-sync-app.service
+systemctl --user status wifi-sync-app.service
+```
 
-After starting AirMesh, verify that the application is listening on the expected ports.
+Then check logs:
 
-## Check UDP Port 8888
+```bash
+journalctl --user -u wifi-sync-app.service -n 100 --no-pager
+```
+
+## Network Troubleshooting
+
+Check the local IP address:
+
+```bash
+hostname -I
+```
+
+Or:
+
+```bash
+ip addr
+```
+
+Check UDP discovery:
 
 ```bash
 sudo ss -lunp | grep 8888
 ```
 
-Expected output should contain something similar to:
-
-```text
-UNCONN 0 0 0.0.0.0:8888 0.0.0.0:*
-```
-
-## Check TCP Port 8889
+Check TCP transfer:
 
 ```bash
 sudo ss -ltnp | grep 8889
 ```
 
-Expected output should contain something similar to:
-
-```text
-LISTEN 0 50 0.0.0.0:8889 0.0.0.0:*
-```
-
-If both ports are listening and UFW allows them, AirMesh should be able to communicate with other devices on the same local network.
-
----
-
-# Test Connectivity Between Devices
-
-From another device on the same Wi-Fi network, test TCP connectivity to the AirMesh machine.
-
-Replace `<AIR-MESH-IP>` with the local IP address of the AirMesh machine.
+From another device on the same network, test TCP port `8889`:
 
 ```bash
 nc -vz <AIR-MESH-IP> 8889
@@ -353,367 +373,153 @@ Example:
 nc -vz 192.168.1.20 8889
 ```
 
-A successful connection should report something similar to:
+Both devices must:
 
-```text
-Connection to 192.168.1.20 8889 port [tcp/*] succeeded!
-```
+- Be connected to the same Wi-Fi/LAN.
+- Have AirMesh running.
+- Allow UDP `8888`.
+- Allow TCP `8889`.
+- Not use Wi-Fi client isolation.
+- Not have a VPN blocking local traffic.
 
-If `nc` is not installed:
+## Quick Start
 
-### Ubuntu/Debian
-
-```bash
-sudo apt install netcat-openbsd
-```
-
-Then:
-
-```bash
-nc -vz <AIR-MESH-IP> 8889
-```
-
----
-
-# Testing UDP Discovery
-
-AirMesh uses UDP broadcast on port `8888` for device discovery.
-
-Verify that both devices:
-
-1. Are connected to the same local Wi-Fi/LAN.
-2. Have AirMesh running.
-3. Have UDP port `8888` allowed.
-4. Have TCP port `8889` allowed.
-5. Are not connected through a guest Wi-Fi network with client isolation.
-6. Are not being blocked by another firewall.
-7. Are not using a VPN that interferes with local network traffic.
-
-Check the local IP address:
-
-```bash
-ip addr
-```
-
-Or:
-
-```bash
-hostname -I
-```
-
----
-
-# Quick AirMesh Network Checklist
-
-If devices cannot discover or communicate with each other, check the following:
-
-```text
-[ ] Both devices are connected to the same Wi-Fi/LAN
-[ ] AirMesh is running on both devices
-[ ] UDP port 8888 is allowed
-[ ] TCP port 8889 is allowed
-[ ] UFW is configured correctly
-[ ] AirMesh is listening on port 8888
-[ ] AirMesh is listening on port 8889
-[ ] Wi-Fi AP/client isolation is disabled
-[ ] No VPN is interfering with local network traffic
-[ ] Systemd service is running correctly
-```
-
-Useful commands:
-
-```bash
-systemctl --user status airmesh.service
-```
-
-```bash
-journalctl --user -u airmesh.service -n 100
-```
-
-```bash
-sudo ufw status
-```
-
-```bash
-sudo ss -lunp | grep 8888
-```
-
-```bash
-sudo ss -ltnp | grep 8889
-```
-
-```bash
-ip addr
-```
-
----
-
-# Manual Launch
-
-If you want to test AirMesh without systemd, run it directly:
-
-```bash
-airmesh
-```
-
-To start it minimized:
-
-```bash
-airmesh --minimized
-```
-
-This is useful when debugging startup or systemd-related problems.
-
----
-
-# Systemd Troubleshooting
-
-If the service fails to start, first check:
-
-```bash
-systemctl --user status airmesh.service
-```
-
-Then inspect the logs:
-
-```bash
-journalctl --user -u airmesh.service -n 100 --no-pager
-```
-
-For live logs:
-
-```bash
-journalctl --user -u airmesh.service -f
-```
-
-Reload systemd configuration if the service file was modified:
-
-```bash
-systemctl --user daemon-reload
-```
-
-Then restart:
-
-```bash
-systemctl --user restart airmesh.service
-```
-
-Check whether the service is enabled:
-
-```bash
-systemctl --user is-enabled airmesh.service
-```
-
-Check whether the service is running:
-
-```bash
-systemctl --user is-active airmesh.service
-```
-
----
-
-# Checking the Service File
-
-Display the installed service file:
-
-```bash
-systemctl --user cat airmesh.service
-```
-
-Check the service configuration without starting it:
-
-```bash
-systemd-analyze --user verify ~/.config/systemd/user/airmesh.service
-```
-
----
-
-# Stopping AirMesh Completely
-
-To stop the systemd service:
-
-```bash
-systemctl --user stop airmesh.service
-```
-
-To prevent it from starting automatically:
-
-```bash
-systemctl --user disable airmesh.service
-```
-
-To terminate any remaining Java process associated with AirMesh:
-
-```bash
-pkill -f airmesh
-```
-
----
-
-# Uninstallation
-
-If an uninstall script is provided:
-
-```bash
-chmod +x uninstall.sh
-```
-
-Then:
-
-```bash
-./uninstall.sh
-```
-
-Otherwise, remove the installed application and service manually.
-
-### 1. Stop and Disable the Service
-
-```bash
-systemctl --user disable --now airmesh.service
-```
-
-### 2. Remove Application Files
-
-```bash
-rm -rf ~/.local/share/airmesh
-```
-
-### 3. Remove Wrapper Script
-
-```bash
-rm -f ~/.local/bin/airmesh
-```
-
-### 4. Remove Systemd Service
-
-```bash
-rm -f ~/.config/systemd/user/airmesh.service
-```
-
-### 5. Reload User Systemd Configuration
-
-```bash
-systemctl --user daemon-reload
-```
-
-### 6. Remove Firewall Rules
-
-```bash
-sudo ufw delete allow 8888/udp
-sudo ufw delete allow 8889/tcp
-```
-
----
-
-# Network Architecture
-
-AirMesh uses two network ports:
-
-```text
-                         Local Wi-Fi / LAN
-                                |
-              +-----------------+-----------------+
-              |                                   |
-              v                                   v
-        +-----------+                       +-----------+
-        |  Device A |                       |  Device B |
-        |  AirMesh  |                       |  AirMesh  |
-        +-----------+                       +-----------+
-              |                                   |
-              | UDP 8888                           |
-              | <---- Device Discovery ----------> |
-              |                                   |
-              | TCP 8889                           |
-              | <--- Clipboard / File Transfer --> |
-              |                                   |
-              +-----------------------------------+
-```
-
-### UDP `8888`
-
-Used for:
-
-* Device discovery
-* UDP broadcast requests
-* Discovery responses
-* Finding AirMesh devices on the local network
-
-### TCP `8889`
-
-Used for:
-
-* Clipboard synchronization
-* File transfers
-* Incoming connection handling
-* Direct peer-to-peer communication
-
----
-
-# Security Considerations
-
-AirMesh is designed for trusted local networks.
-
-Because AirMesh communicates directly between devices on the LAN:
-
-* Do not expose TCP port `8889` directly to the public internet.
-* Do not forward ports `8888` or `8889` from your router.
-* Use AirMesh primarily on trusted home, college, office, or private networks.
-* Incoming file transfers should require user confirmation.
-* Avoid using AirMesh on untrusted public Wi-Fi networks.
-* Firewall rules should restrict access to the local network where possible.
-
-For a trusted local network, the basic UFW rules are:
-
-```bash
-sudo ufw allow 8888/udp
-sudo ufw allow 8889/tcp
-```
-
----
-
-# Quick Start
-
-For a fresh Ubuntu installation:
+For a fresh installation:
 
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-Allow the required firewall ports:
+Enable and start the service:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now wifi-sync-app.service
+```
+
+Check status:
+
+```bash
+systemctl --user status wifi-sync-app.service
+```
+
+Check logs:
+
+```bash
+journalctl --user -u wifi-sync-app.service -f
+```
+
+Configure firewall:
 
 ```bash
 sudo ufw allow 8888/udp
 sudo ufw allow 8889/tcp
+sudo ufw reload
 ```
 
-Check the service:
-
-```bash
-systemctl --user status airmesh.service
-```
-
-Check the application logs:
-
-```bash
-journalctl --user -u airmesh.service -f
-```
-
-Check the network ports:
+Check ports:
 
 ```bash
 sudo ss -lunp | grep 8888
 sudo ss -ltnp | grep 8889
 ```
 
-Check the firewall:
+## Uninstallation
+
+Stop and disable the service:
 
 ```bash
-sudo ufw status
+systemctl --user disable --now wifi-sync-app.service
 ```
 
----
+Remove application files:
+
+```bash
+rm -rf ~/.local/share/wifi-sync-app
+```
+
+Remove launcher:
+
+```bash
+rm -f ~/.local/bin/wifi-sync-app
+```
+
+Remove systemd service:
+
+```bash
+rm -f ~/.config/systemd/user/wifi-sync-app.service
+```
+
+Reload systemd:
+
+```bash
+systemctl --user daemon-reload
+```
+
+Remove firewall rules:
+
+```bash
+sudo ufw delete allow 8888/udp
+sudo ufw delete allow 8889/tcp
+```
+
+## Network Architecture
+
+```text
+                    Local Wi-Fi / LAN
+                           |
+             +-------------+-------------+
+             |                           |
+             v                           v
+       +-----------+               +-----------+
+       |  Device A |               |  Device B |
+       |  AirMesh  |               |  AirMesh  |
+       +-----------+               +-----------+
+             |                           |
+             |<---- UDP 8888 ---------->|
+             |     Discovery            |
+             |                           |
+             |<---- TCP 8889 ---------->|
+             | Clipboard / Files        |
+             |                           |
+             +---------------------------+
+```
+
+### UDP Port 8888
+
+Used for:
+
+- Device discovery
+- UDP broadcast
+- Discovery requests
+- Discovery responses
+
+### TCP Port 8889
+
+Used for:
+
+- Clipboard synchronization
+- File transfers
+- Incoming connections
+- Peer-to-peer communication
+
+## Security
+
+AirMesh is designed for trusted local networks.
+
+- Do not expose port `8889` to the public internet.
+- Do not forward ports `8888` or `8889` on your router.
+- Avoid using AirMesh on untrusted public Wi-Fi.
+- Incoming file transfers should require user confirmation.
+- Use firewall rules to limit access where appropriate.
+
+## License
+
+Add your project license here.
+
+## Author
 
 **AirMesh**
 
-A lightweight local-network clipboard synchronization and peer-to-peer file transfer utility for Linux.
+A lightweight Linux utility for local-network clipboard synchronization and peer-to-peer file transfers.
