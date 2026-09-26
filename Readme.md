@@ -1,6 +1,6 @@
-# RelayNet
+# AirMesh
 
-RelayNet is a lightweight, cross-device background utility designed to automatically synchronize system clipboards and enable peer-to-peer file transfers across a shared local Wi-Fi network.
+AirMesh is a lightweight, cross-device background utility designed to automatically synchronize system clipboards and enable peer-to-peer file transfers across a shared local Wi-Fi network.
 
 ---
 
