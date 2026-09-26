@@ -19,7 +19,7 @@ AirMesh operates silently in the system tray / top-bar extension area. Once inst
 
 ## Architecture & Developer Guide
 
-RelayNet is written in Java 11 using standard Java AWT, Swing, and Socket APIs to minimize external dependencies.
+AirMesh is written in Java 11 using standard Java AWT, Swing, and Socket APIs to minimize external dependencies.
 
 ### Module Breakdown
 
