@@ -1,0 +1,12 @@
+com/wifisync/model/Peer.class
+com/wifisync/util/Logger.class
+com/wifisync/network/NetworkClient.class
+com/wifisync/Main.class
+com/wifisync/service/ClipboardService.class
+com/wifisync/gui/MainFrame.class
+com/wifisync/network/DiscoveryService.class
+com/wifisync/gui/MainFrame$2.class
+com/wifisync/network/NetworkServer.class
+com/wifisync/network/NetworkServer$MessageHandler.class
+com/wifisync/network/DiscoveryService$PeerDiscoveryListener.class
+com/wifisync/gui/MainFrame$1.class
